@@ -125,3 +125,70 @@ Curious about who makes Expo? Here are our [team members](https://expo.dev/about
 The Expo source code is made available under the [MIT license](LICENSE). Some of the dependencies are licensed differently, with the BSD license, for example.
 
 <img alt="Star the Expo repo on GitHub to support the project" src="https://user-images.githubusercontent.com/9664363/185428788-d762fd5d-97b3-4f59-8db7-f72405be9677.gif" width="50%">
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Meu TikTok Offline</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        video { object-fit: cover; width: 100%; height: 100%; background: #000; }
+    </style>
+</head>
+<body class="bg-black text-white overflow-hidden">
+
+    <div id="setup" class="fixed inset-0 z-50 bg-gray-900 flex flex-col items-center justify-center p-8 text-center">
+        <div class="mb-4 text-6xl">📥</div>
+        <h1 class="text-2xl font-bold mb-2">Galeria em Feed</h1>
+        <p class="text-gray-400 mb-8 text-sm">Selecione seus vídeos baixados do TikTok/Instagram.</p>
+        <input type="file" id="videoInput" accept="video/*" multiple class="hidden">
+        <label for="videoInput" class="bg-white text-black px-8 py-4 rounded-full font-bold cursor-pointer active:scale-95 transition">
+            SELECIONAR VÍDEOS
+        </label>
+    </div>
+
+    <div id="feed" class="h-screen w-full overflow-y-scroll snap-y snap-mandatory no-scrollbar hidden"></div>
+
+    <script>
+        const videoInput = document.getElementById('videoInput');
+        const feed = document.getElementById('feed');
+        const setup = document.getElementById('setup');
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                const video = entry.target.querySelector('video');
+                if (entry.isIntersecting) { video.play().catch(() => {}); } 
+                else { video.pause(); }
+            });
+        }, { threshold: 0.6 });
+
+        videoInput.addEventListener('change', function(e) {
+            const files = Array.from(e.target.files);
+            if (files.length > 0) {
+                setup.classList.add('hidden');
+                feed.classList.remove('hidden');
+                files.forEach(file => {
+                    const url = URL.createObjectURL(file);
+                    const section = document.createElement('section');
+                    section.className = "relative h-screen w-full snap-start overflow-hidden";
+                    section.innerHTML = `<video src="${url}" class="w-full h-full" loop playsinline></video>
+                    <div class="absolute bottom-10 left-4 text-white p-4 drop-shadow-md">
+                        <p class="font-bold">@MeuApp</p>
+                        <p class="text-xs opacity-70">${file.name}</p>
+                    </div>`;
+                    feed.appendChild(section);
+                    observer.observe(section);
+                });
+            }
+        });
+
+        document.addEventListener('click', () => {
+            document.querySelectorAll('video').forEach(v => v.muted = false);
+        }, { once: true });
+    </script>
+</body>
+</html>
+
