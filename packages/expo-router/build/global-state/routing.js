@@ -57,6 +57,7 @@ const emitDomEvent_1 = require("../domComponents/emitDomEvent");
 const getRoutesRedirects_1 = require("../getRoutesRedirects");
 const href_1 = require("../link/href");
 const matchers_1 = require("../matchers");
+const navigationEvents_1 = require("../navigationEvents");
 const navigationParams_1 = require("../navigationParams");
 const url_1 = require("../utils/url");
 function assertIsReady() {
@@ -78,6 +79,14 @@ exports.routingQueue = {
     },
     add(action) {
         exports.routingQueue.queue.push(action);
+        if (action.type === 'ROUTER_LINK') {
+            const payload = action?.payload;
+            if (payload) {
+                navigationEvents_1.unstable_navigationEvents.emit('linkNavigate', {
+                    href: payload.href,
+                });
+            }
+        }
         for (const callback of exports.routingQueue.subscribers) {
             callback();
         }

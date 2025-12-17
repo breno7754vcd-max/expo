@@ -23,6 +23,7 @@ import { ResultState } from '../fork/getStateFromPath';
 import { applyRedirects } from '../getRoutesRedirects';
 import { resolveHref, resolveHrefStringWithSegments } from '../link/href';
 import { matchDynamicName } from '../matchers';
+import { unstable_navigationEvents } from '../navigationEvents';
 import {
   appendInternalExpoRouterParams,
   INTERNAL_EXPO_ROUTER_IS_PREVIEW_NAVIGATION_PARAM_NAME,
@@ -63,6 +64,14 @@ export const routingQueue = {
   },
   add(action: NavigationAction | LinkAction) {
     routingQueue.queue.push(action);
+    if (action.type === 'ROUTER_LINK') {
+      const payload = (action as LinkAction | undefined)?.payload;
+      if (payload) {
+        unstable_navigationEvents.emit('linkNavigate', {
+          href: payload.href,
+        });
+      }
+    }
     for (const callback of routingQueue.subscribers) {
       callback();
     }

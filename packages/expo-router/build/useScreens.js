@@ -45,10 +45,12 @@ exports.getSingularId = getSingularId;
 const native_1 = require("@react-navigation/native");
 const react_1 = __importStar(require("react"));
 const Route_1 = require("./Route");
+const getPathFromState_1 = require("./fork/getPathFromState");
 const storeContext_1 = require("./global-state/storeContext");
 const import_mode_1 = __importDefault(require("./import-mode"));
 const ZoomTransitionEnabler_1 = require("./link/zoom/ZoomTransitionEnabler");
 const zoom_transition_context_providers_1 = require("./link/zoom/zoom-transition-context-providers");
+const navigationEvents_1 = require("./navigationEvents");
 const navigationParams_1 = require("./navigationParams");
 const primitives_1 = require("./primitives");
 const EmptyRoute_1 = require("./views/EmptyRoute");
@@ -223,6 +225,7 @@ function getQualifiedRouteComponent(value) {
             });
         }, [navigation]);
         return (<Route_1.Route node={value} route={route}>
+        {value.type === 'route' && navigationEvents_1.unstable_navigationEvents.hasAnyListener() && (<AnalyticsListeners navigation={navigation}/>)}
         <ZoomTransitionEnabler_1.ZoomTransitionEnabler route={route}/>
         <zoom_transition_context_providers_1.ZoomTransitionTargetContextProvider route={route}>
           <react_1.default.Suspense fallback={<SuspenseFallback_1.SuspenseFallback route={value}/>}>
@@ -239,6 +242,53 @@ function getQualifiedRouteComponent(value) {
     }
     qualifiedStore.set(value, BaseRoute);
     return BaseRoute;
+}
+function AnalyticsListeners({ navigation }) {
+    const stateForPath = (0, native_1.useStateForPath)();
+    const isFirstRenderRef = react_1.default.useRef(true);
+    const pathname = (0, react_1.useMemo)(() => (stateForPath ? decodeURIComponent((0, getPathFromState_1.getPathFromState)(stateForPath)) : undefined), [stateForPath]);
+    if (isFirstRenderRef.current) {
+        isFirstRenderRef.current = false;
+        if (pathname) {
+            navigationEvents_1.unstable_navigationEvents.emit('pageWillRender', {
+                pathname,
+            });
+        }
+    }
+    (0, react_1.useEffect)(() => {
+        if (pathname) {
+            const cleanTransitionStart = navigation.addListener('transitionStart', (e) => {
+                const type = e.data?.closing ? 'pageWillDisappear' : 'pageWillShow';
+                navigationEvents_1.unstable_navigationEvents.emit(type, {
+                    pathname,
+                });
+            });
+            const cleanTransitionEnd = navigation.addListener('transitionEnd', (e) => {
+                const type = e.data?.closing ? 'pageDidDisappear' : 'pageDidShow';
+                navigationEvents_1.unstable_navigationEvents.emit(type, {
+                    pathname,
+                });
+            });
+            const cleanFocus = navigation.addListener('focus', () => {
+                navigationEvents_1.unstable_navigationEvents.emit('pageFocused', {
+                    pathname,
+                });
+            });
+            const cleanBlur = navigation.addListener('blur', () => {
+                navigationEvents_1.unstable_navigationEvents.emit('pageBlurred', {
+                    pathname,
+                });
+            });
+            return () => {
+                cleanTransitionStart();
+                cleanTransitionEnd();
+                cleanFocus();
+                cleanBlur();
+            };
+        }
+        return () => { };
+    }, [navigation, pathname]);
+    return null;
 }
 function screenOptionsFactory(route, options) {
     return (args) => {
